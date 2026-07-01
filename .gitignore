@@ -1,0 +1,46 @@
+# ===== 依赖 =====
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# ===== 构建产物 =====
+dist/
+build/
+**/dist/
+**/build/
+*.tsbuildinfo
+
+# ===== Tauri / Rust =====
+src-tauri/target/
+target/
+**/*.rs.bk
+Cargo.lock
+
+# ===== Python =====
+__pycache__/
+**/__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# ===== 密钥 / 数据库（绝不上传） =====
+.env
+**/.env
+*.db
+*.sqlite
+*.sqlite3
+*.key
+*.pem
+*.p12
+*secret*
+!**/*.example
+*.bak_*
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
