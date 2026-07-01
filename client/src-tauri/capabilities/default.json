@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "异想天开桌面端默认权限",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}
