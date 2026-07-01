@@ -1,6 +1,10 @@
 /** API 客户端：封装 fetch + token 管理 */
 
-const API_BASE = "/yt-api";
+// Web 版走同源 /yt-api（nginx 反代）；Tauri 桌面版走绝对域名
+const IS_TAURI =
+  typeof (window as any).__TAURI_INTERNALS__ !== "undefined" ||
+  typeof (window as any).__TAURI__ !== "undefined";
+export const API_BASE = IS_TAURI ? "https://blog.tczeng.top/yt-api" : "/yt-api";
 
 export interface UserPublic {
   id: number;
@@ -184,6 +188,14 @@ export const api = {
   },
   appendMessages(id: number, messages: { role: string; content: string }[]) {
     return request<{ ok: boolean; added: number }>(`/me/conversations/${id}/messages`, { method: "POST", body: JSON.stringify({ messages }) });
+  },
+
+  // ---------- 通用（工具等） ----------
+  get<T = any>(path: string) {
+    return request<T>(path);
+  },
+  post<T = any>(path: string, body?: any) {
+    return request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) });
   },
 };
 

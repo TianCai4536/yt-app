@@ -5,11 +5,12 @@ import { useChat } from "../lib/chatStore";
 import { useSettings } from "../lib/settingsStore";
 import { useTheme } from "../lib/themeStore";
 import { ChatPanel } from "../components/ChatPanel";
+import { AgentView } from "../components/AgentView";
 import { ConversationList } from "../components/ConversationList";
 import { SettingsView } from "../components/SettingsView";
 import { AccountView } from "../components/AccountView";
 
-type View = "chat" | "settings" | "account";
+type View = "chat" | "agent" | "settings" | "account";
 
 export function WorkbenchPage() {
   const { user, loadMe, logout } = useAuth();
@@ -43,7 +44,7 @@ export function WorkbenchPage() {
     setSideOpen(false);
   }
 
-  const title = view === "chat" ? "对话" : view === "settings" ? "系统设置" : "个人中心";
+  const title = view === "chat" ? "对话" : view === "agent" ? "Agent 模式" : view === "settings" ? "系统设置" : "个人中心";
 
   return (
     <div className="wb">
@@ -58,18 +59,13 @@ export function WorkbenchPage() {
         <div className="wb-section-label">对话</div>
         <ConversationList model={curModel} onEnterChat={() => go("chat")} />
 
-        {/* M7 预留功能按钮（开发完成后同步启用） */}
-        <div className="wb-section-label">工具（即将开放）</div>
+        {/* 工具 */}
+        <div className="wb-section-label">工具</div>
         <div className="wb-tools">
-          <button className="wb-tool" disabled title="M7 本地工具 / Agent，开发中">
-            <span className="tool-icon">🛠</span>
-            <span className="tool-label">本地工具</span>
-            <span className="tool-soon">M7</span>
-          </button>
-          <button className="wb-tool" disabled title="M7 Agent 自动执行，开发中">
+          <button className={`wb-tool${view === "agent" ? " active" : ""}`} onClick={() => go("agent")} title="Agent 自主调用工具完成任务">
             <span className="tool-icon">🤖</span>
             <span className="tool-label">Agent 模式</span>
-            <span className="tool-soon">M7</span>
+            <span className="tool-new">NEW</span>
           </button>
           <button className="wb-tool" disabled title="M8 浏览器 + OCR，开发中">
             <span className="tool-icon">🌐</span>
@@ -106,6 +102,15 @@ export function WorkbenchPage() {
                 value={curModel}
                 onChange={setCurModel}
               />
+            ) : view === "agent" ? (
+              <div className="model-selector">
+                <span className="wb-page-title">🤖 Agent 模式</span>
+                <select value={curModel || ""} onChange={(e) => setCurModel(e.target.value)}>
+                  {(user?.models || []).map((m) => (
+                    <option key={m.model_key} value={m.model_key}>{m.display_name}</option>
+                  ))}
+                </select>
+              </div>
             ) : (
               <span className="wb-page-title">{title}</span>
             )}
@@ -115,6 +120,7 @@ export function WorkbenchPage() {
 
         <section className="wb-body">
           {view === "chat" && <ChatPanel model={curModel} />}
+          {view === "agent" && <AgentView model={curModel} />}
           {view === "settings" && <SettingsView models={user?.models || []} />}
           {view === "account" && <AccountView onBack={() => go("chat")} />}
         </section>

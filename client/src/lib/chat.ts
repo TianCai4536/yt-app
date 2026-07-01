@@ -1,5 +1,5 @@
 /** 流式聊天：调用 /v1/chat/completions */
-import { tokenStore } from "./api";
+import { tokenStore, API_BASE } from "./api";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -26,7 +26,7 @@ export async function streamChat(
   const body: any = { model, messages: finalMessages, stream: true };
   if (options?.temperature != null) body.temperature = options.temperature;
   try {
-    res = await fetch("/yt-api/v1/chat/completions", {
+    res = await fetch(`${API_BASE}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
