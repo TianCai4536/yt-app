@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { runAgent, type ToolCallEvent } from "../lib/agent";
 import { buildToolRegistry, loadCloudSchemas, loadPluginManifests, getPluginDir, pluginCount, isTauri } from "../lib/tools";
+import { loadSkills, skillCount, buildSkillsPrompt, READ_SKILL_SCHEMA, execReadSkill } from "../lib/skills";
 import { useAuth } from "../lib/store";
 import { useSettings } from "../lib/settingsStore";
 import { useDialog } from "../lib/dialog";
@@ -19,12 +20,12 @@ interface AgentMsg {
 const TOOL_ICONS: Record<string, string> = {
   calculate: "🧮", web_search: "🔍", web_fetch: "🌐",
   read_file: "📄", write_file: "✍️", list_dir: "📁", run_shell: "⌨️",
-  edit_file: "✏️", glob: "🔎", grep: "🔍",
+  edit_file: "✏️", glob: "🔎", grep: "🔍", read_skill: "📘",
 };
 const TOOL_NAMES: Record<string, string> = {
   calculate: "计算", web_search: "联网搜索", web_fetch: "网页抓取",
   read_file: "读文件", write_file: "写文件", list_dir: "列目录", run_shell: "执行命令",
-  edit_file: "编辑文件", glob: "查找文件", grep: "搜索内容",
+  edit_file: "编辑文件", glob: "查找文件", grep: "搜索内容", read_skill: "读取技能",
 };
 
 export function AgentView({ model }: { model: string | null }) {
@@ -34,6 +35,7 @@ export function AgentView({ model }: { model: string | null }) {
   const [enableLocal, setEnableLocal] = useState(isTauri());
   const [plugins, setPlugins] = useState(0);
   const [pluginPath, setPluginPath] = useState("");
+  const [skills, setSkills] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
@@ -47,6 +49,8 @@ export function AgentView({ model }: { model: string | null }) {
     await loadPluginManifests();
     setPlugins(pluginCount());
     setPluginPath(await getPluginDir());
+    await loadSkills();
+    setSkills(skillCount());
   }, []);
   useEffect(() => { reloadPlugins(); }, [reloadPlugins]);
   useEffect(() => {
@@ -66,6 +70,10 @@ export function AgentView({ model }: { model: string | null }) {
     setBusy(true);
 
     const registry = buildToolRegistry(enableLocal);
+    // 技能系统：注册 read_skill 工具（仅桌面版且有技能时）
+    if (enableLocal && isTauri() && skillCount() > 0) {
+      registry.set("read_skill", { schema: READ_SKILL_SCHEMA, source: "local", execute: (a) => execReadSkill(a) });
+    }
     const ac = new AbortController();
     abortRef.current = ac;
 
@@ -96,7 +104,7 @@ export function AgentView({ model }: { model: string | null }) {
         },
       },
       ac.signal,
-      { temperature: settings.temperature, system_prompt: settings.system_prompt },
+      { temperature: settings.temperature, system_prompt: [settings.system_prompt, buildSkillsPrompt()].filter(Boolean).join("\n\n") },
     );
   }, [input, busy, model, msgs, enableLocal, settings, loadMe, dialog]);
 
@@ -122,6 +130,7 @@ export function AgentView({ model }: { model: string | null }) {
                 🧮 计算　🔍 联网搜索　🌐 网页抓取
                 {isTauri() && "　📄 文件　🔎 搜索　✏️ 编辑　⌨️ 命令"}
                 {isTauri() && plugins > 0 && `　🧩 ${plugins} 个插件`}
+                {isTauri() && skills > 0 && `　📘 ${skills} 个技能`}
               </div>
               <div className="agent-eg" onClick={() => setInput("搜索一下今天有什么科技新闻，总结3条")}>
                 💡 搜索今天的科技新闻并总结
@@ -168,10 +177,10 @@ export function AgentView({ model }: { model: string | null }) {
               <input type="checkbox" checked={enableLocal} onChange={(e) => setEnableLocal(e.target.checked)} />
               启用本地工具（文件/命令/插件）
               <span className="agent-plugin-info" title={pluginPath ? `插件目录：${pluginPath}` : ""}>
-                {plugins > 0 ? `　🧩 ${plugins} 个插件` : ""}
+                {plugins > 0 ? `　🧩 ${plugins}` : ""}{skills > 0 ? `　📘 ${skills}` : ""}
               </span>
-              <button type="button" className="agent-plugin-reload" onClick={(e) => { e.preventDefault(); reloadPlugins(); }} title="重新扫描插件目录（新增插件后点这里，无需重启）">
-                ↻ 重载插件
+              <button type="button" className="agent-plugin-reload" onClick={(e) => { e.preventDefault(); reloadPlugins(); }} title="重新扫描插件/技能目录（新增后点这里，无需重启）">
+                ↻ 重载
               </button>
             </label>
           )}
