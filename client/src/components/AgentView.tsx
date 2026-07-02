@@ -108,10 +108,11 @@ export function AgentView({ model }: { model: string | null }) {
         onDone: () => { patchAsst((m) => ({ ...m, running: false })); setBusy(false); loadMe(); memoryCount().then(setMemCount); },
         onError: (msg) => { patchAsst((m) => ({ ...m, content: m.content || `⚠️ ${msg}`, running: false })); setBusy(false); },
         requireApproval: async (ev) => {
-          const argStr = JSON.stringify(ev.args, null, 2);
+          // 只展示主要内容：每个参数值过长截断，避免弹窗被擑爆
+          const brief = summarizeArgs(ev.args);
           return dialog.confirm({
             title: `⚠️ 高危操作需确认：${TOOL_NAMES[ev.name] || ev.name}`,
-            message: `AI 请求执行：\n${argStr}\n\n是否允许？`,
+            message: `AI 请求执行：\n${brief}\n\n是否允许？`,
             confirmText: "允许执行",
             danger: true,
           });
@@ -221,8 +222,27 @@ export function AgentView({ model }: { model: string | null }) {
   );
 }
 
-function ToolCard({ ev }: { ev: ToolCallEvent }) {
-  const [open, setOpen] = useState(false);
+// 审批弹窗参数摘要：每个值过长截断，总长限制，保证弹窗不被擑爆
+function summarizeArgs(args: any): string {
+  if (!args || typeof args !== "object") return String(args ?? "");
+  const PER_VALUE_MAX = 300; // 单个参数值最多显示字符
+  const TOTAL_MAX = 800;     // 总摘要最多字符
+  const lines: string[] = [];
+  for (const [k, v] of Object.entries(args)) {
+    let val = typeof v === "string" ? v : JSON.stringify(v);
+    val = val ?? "";
+    const total = val.length;
+    if (total > PER_VALUE_MAX) {
+      val = val.slice(0, PER_VALUE_MAX) + `…（共 ${total} 字，已折叠）`;
+    }
+    lines.push(`• ${k}：${val}`);
+  }
+  let out = lines.join("\n");
+  if (out.length > TOTAL_MAX) out = out.slice(0, TOTAL_MAX) + "\n…（内容较多，仅显示主要部分）";
+  return out || "（无参数）";
+}
+
+function ToolCard({ ev }: { ev: ToolCallEvent }) {  const [open, setOpen] = useState(false);
   const icon = TOOL_ICONS[ev.name] || "🔧";
   const name = TOOL_NAMES[ev.name] || ev.name;
   const statusText: Record<string, string> = {

@@ -529,14 +529,14 @@ input { font-family: inherit; }
 @keyframes pulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
 
 /* ===== 通用弹窗（confirm/prompt） ===== */
-.modal-mask { position: fixed; inset: 0; background: var(--c-mask); display: flex; align-items: center; justify-content: center; z-index: 200; }
-.modal { background: var(--c-panel); border: 1px solid var(--c-border); border-radius: 16px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
-.modal-sm { width: 400px; max-width: 90vw; }
-.modal h3 { font-size: 17px; margin-bottom: 16px; }
-.modal-text { color: var(--c-text-dim); font-size: 14px; line-height: 1.6; margin-bottom: 18px; }
-.modal-input { width: 100%; padding: 10px 13px; background: var(--c-panel2); border: 1px solid var(--c-border); border-radius: 8px; color: var(--c-text); font-size: 14px; margin-bottom: 18px; }
+.modal-mask { position: fixed; inset: 0; background: var(--c-mask); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; box-sizing: border-box; }
+.modal { background: var(--c-panel); border: 1px solid var(--c-border); border-radius: 16px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.4); display: flex; flex-direction: column; max-height: 85vh; box-sizing: border-box; }
+.modal-sm { width: 440px; max-width: 90vw; }
+.modal h3 { font-size: 17px; margin-bottom: 16px; flex: 0 0 auto; }
+.modal-text { color: var(--c-text-dim); font-size: 14px; line-height: 1.6; margin-bottom: 18px; overflow-y: auto; flex: 1 1 auto; min-height: 0; white-space: pre-wrap; word-break: break-word; }
+.modal-input { width: 100%; padding: 10px 13px; background: var(--c-panel2); border: 1px solid var(--c-border); border-radius: 8px; color: var(--c-text); font-size: 14px; margin-bottom: 18px; flex: 0 0 auto; }
 .modal-input:focus { outline: none; border-color: var(--c-purple); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex: 0 0 auto; }
 .modal-actions button { padding: 9px 18px; border-radius: var(--radius); border: 1px solid var(--c-border); background: var(--c-panel2); color: var(--c-text); font-size: 14px; }
 .modal-actions .btn-primary { border: none; background: var(--c-grad); color: #fff; font-weight: 600; }
 .btn-danger { padding: 9px 18px; border: none; border-radius: var(--radius); background: #ef4444; color: #fff; font-weight: 600; font-size: 14px; }
