@@ -1,0 +1,16 @@
+{
+  "name": "http_request",
+  "description": "发起结构化 HTTP 请求（GET/POST 等），可自定义 method、headers、body，返回状态码和响应体。适合调 API、抓 JSON 接口。",
+  "dangerous": true,
+  "command": "python run.py",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string", "description": "请求 URL" },
+      "method": { "type": "string", "description": "GET/POST/PUT/DELETE，默认 GET" },
+      "headers": { "type": "object", "description": "请求头键值对" },
+      "body": { "type": "string", "description": "请求体（POST/PUT 时用，字符串或 JSON 字符串）" }
+    },
+    "required": ["url"]
+  }
+}

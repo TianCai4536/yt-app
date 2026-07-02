@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { runAgent, type ToolCallEvent } from "../lib/agent";
-import { buildToolRegistry, loadCloudSchemas, isTauri } from "../lib/tools";
+import { buildToolRegistry, loadCloudSchemas, loadPluginManifests, getPluginDir, pluginCount, isTauri } from "../lib/tools";
 import { useAuth } from "../lib/store";
 import { useSettings } from "../lib/settingsStore";
 import { useDialog } from "../lib/dialog";
@@ -19,10 +19,12 @@ interface AgentMsg {
 const TOOL_ICONS: Record<string, string> = {
   calculate: "🧮", web_search: "🔍", web_fetch: "🌐",
   read_file: "📄", write_file: "✍️", list_dir: "📁", run_shell: "⌨️",
+  edit_file: "✏️", glob: "🔎", grep: "🔍",
 };
 const TOOL_NAMES: Record<string, string> = {
   calculate: "计算", web_search: "联网搜索", web_fetch: "网页抓取",
   read_file: "读文件", write_file: "写文件", list_dir: "列目录", run_shell: "执行命令",
+  edit_file: "编辑文件", glob: "查找文件", grep: "搜索内容",
 };
 
 export function AgentView({ model }: { model: string | null }) {
@@ -30,6 +32,8 @@ export function AgentView({ model }: { model: string | null }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [enableLocal, setEnableLocal] = useState(isTauri());
+  const [plugins, setPlugins] = useState(0);
+  const [pluginPath, setPluginPath] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
@@ -37,6 +41,14 @@ export function AgentView({ model }: { model: string | null }) {
   const dialog = useDialog();
 
   useEffect(() => { loadCloudSchemas(); }, []);
+  // 加载本地插件清单（仅桌面版）
+  const reloadPlugins = useCallback(async () => {
+    if (!isTauri()) return;
+    await loadPluginManifests();
+    setPlugins(pluginCount());
+    setPluginPath(await getPluginDir());
+  }, []);
+  useEffect(() => { reloadPlugins(); }, [reloadPlugins]);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
@@ -107,7 +119,8 @@ export function AgentView({ model }: { model: string | null }) {
             <div className="agent-examples">
               <div className="agent-tools-avail">
                 🧮 计算　🔍 联网搜索　🌐 网页抓取
-                {isTauri() && "　📄 本地文件　⌨️ 命令执行"}
+                {isTauri() && "　📄 文件　🔎 搜索　✏️ 编辑　⌨️ 命令"}
+                {isTauri() && plugins > 0 && `　🧩 ${plugins} 个插件`}
               </div>
               <div className="agent-eg" onClick={() => setInput("搜索一下今天有什么科技新闻，总结3条")}>
                 💡 搜索今天的科技新闻并总结
@@ -152,7 +165,13 @@ export function AgentView({ model }: { model: string | null }) {
           {isTauri() && (
             <label className="agent-local-toggle">
               <input type="checkbox" checked={enableLocal} onChange={(e) => setEnableLocal(e.target.checked)} />
-              启用本地工具（文件/命令）
+              启用本地工具（文件/命令/插件）
+              <span className="agent-plugin-info" title={pluginPath ? `插件目录：${pluginPath}` : ""}>
+                {plugins > 0 ? `　🧩 ${plugins} 个插件` : ""}
+              </span>
+              <button type="button" className="agent-plugin-reload" onClick={(e) => { e.preventDefault(); reloadPlugins(); }} title="重新扫描插件目录（新增插件后点这里，无需重启）">
+                ↻ 重载插件
+              </button>
             </label>
           )}
           <div className="chat-input-row">

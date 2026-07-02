@@ -6,7 +6,7 @@
 import { tokenStore, API_BASE } from "./api";
 import type { ChatMessage } from "./chat";
 import type { ToolDef } from "./tools";
-import { DANGEROUS_TOOLS } from "./tools";
+import { isDangerous } from "./tools";
 
 export interface ToolCallEvent {
   id: string;
@@ -26,7 +26,7 @@ export interface AgentCallbacks {
   requireApproval: (ev: ToolCallEvent) => Promise<boolean>;
 }
 
-const MAX_ROUNDS = 8;
+const MAX_ROUNDS = 16;
 
 async function callModel(
   model: string,
@@ -109,8 +109,8 @@ export async function runAgent(
           continue;
         }
 
-        // 高危工具审批
-        if (DANGEROUS_TOOLS.has(name)) {
+        // 高危工具审批（内置高危 + 插件声明的高危）
+        if (isDangerous(name)) {
           const ok = await cb.requireApproval(ev);
           if (!ok) {
             ev.status = "rejected";

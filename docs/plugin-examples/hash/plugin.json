@@ -1,0 +1,14 @@
+{
+  "name": "hash",
+  "description": "计算文本或本地文件的哈希值（md5/sha1/sha256）。传 text 算文本，传 file 算文件。",
+  "dangerous": false,
+  "command": "python run.py",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "text": { "type": "string", "description": "要计算哈希的文本" },
+      "file": { "type": "string", "description": "要计算哈希的本地文件路径" },
+      "algo": { "type": "string", "description": "算法：md5/sha1/sha256，默认 sha256" }
+    }
+  }
+}

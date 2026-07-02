@@ -1,0 +1,10 @@
+{
+  "name": "sysinfo",
+  "description": "查看本机系统信息：操作系统、CPU 核数、内存、磁盘、Python 版本、当前目录。无需参数。",
+  "dangerous": false,
+  "command": "python run.py",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}
