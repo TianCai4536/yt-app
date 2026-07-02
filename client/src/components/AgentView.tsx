@@ -5,6 +5,7 @@ import rehypeHighlight from "rehype-highlight";
 import { runAgent, type ToolCallEvent } from "../lib/agent";
 import { buildToolRegistry, loadCloudSchemas, loadPluginManifests, getPluginDir, pluginCount, isTauri } from "../lib/tools";
 import { loadSkills, skillCount, buildSkillsPrompt, READ_SKILL_SCHEMA, execReadSkill } from "../lib/skills";
+import { buildMemoryRecall, MEMORY_WRITE_SCHEMA, MEMORY_SEARCH_SCHEMA, execMemoryWrite, execMemorySearch, memoryCount } from "../lib/memory";
 import { useAuth } from "../lib/store";
 import { useSettings } from "../lib/settingsStore";
 import { useDialog } from "../lib/dialog";
@@ -20,12 +21,12 @@ interface AgentMsg {
 const TOOL_ICONS: Record<string, string> = {
   calculate: "🧮", web_search: "🔍", web_fetch: "🌐",
   read_file: "📄", write_file: "✍️", list_dir: "📁", run_shell: "⌨️",
-  edit_file: "✏️", glob: "🔎", grep: "🔍", read_skill: "📘",
+  edit_file: "✏️", glob: "🔎", grep: "🔍", read_skill: "📘", memory_write: "📝", memory_search: "🧠",
 };
 const TOOL_NAMES: Record<string, string> = {
   calculate: "计算", web_search: "联网搜索", web_fetch: "网页抓取",
   read_file: "读文件", write_file: "写文件", list_dir: "列目录", run_shell: "执行命令",
-  edit_file: "编辑文件", glob: "查找文件", grep: "搜索内容", read_skill: "读取技能",
+  edit_file: "编辑文件", glob: "查找文件", grep: "搜索内容", read_skill: "读取技能", memory_write: "记忆", memory_search: "回忆",
 };
 
 export function AgentView({ model }: { model: string | null }) {
@@ -36,6 +37,7 @@ export function AgentView({ model }: { model: string | null }) {
   const [plugins, setPlugins] = useState(0);
   const [pluginPath, setPluginPath] = useState("");
   const [skills, setSkills] = useState(0);
+  const [memCount, setMemCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
@@ -51,6 +53,7 @@ export function AgentView({ model }: { model: string | null }) {
     setPluginPath(await getPluginDir());
     await loadSkills();
     setSkills(skillCount());
+    setMemCount(await memoryCount());
   }, []);
   useEffect(() => { reloadPlugins(); }, [reloadPlugins]);
   useEffect(() => {
@@ -74,11 +77,22 @@ export function AgentView({ model }: { model: string | null }) {
     if (enableLocal && isTauri() && skillCount() > 0) {
       registry.set("read_skill", { schema: READ_SKILL_SCHEMA, source: "local", execute: (a) => execReadSkill(a) });
     }
+    // 记忆系统：注册 memory_write/search（仅桌面版）
+    if (enableLocal && isTauri()) {
+      registry.set("memory_write", { schema: MEMORY_WRITE_SCHEMA, source: "local", execute: (a) => execMemoryWrite(a) });
+      registry.set("memory_search", { schema: MEMORY_SEARCH_SCHEMA, source: "local", execute: (a) => execMemorySearch(a) });
+    }
     const ac = new AbortController();
     abortRef.current = ac;
 
     function patchAsst(fn: (m: AgentMsg) => AgentMsg) {
       setMsgs((prev) => prev.map((m) => (m.id === asstId ? fn(m) : m)));
+    }
+
+    // 记忆召回：基于本次输入检索相关记忆（仅桌面版）
+    let memRecall = "";
+    if (enableLocal && isTauri()) {
+      try { memRecall = await buildMemoryRecall(text); } catch { /* ignore */ }
     }
 
     await runAgent(
@@ -91,7 +105,7 @@ export function AgentView({ model }: { model: string | null }) {
         onToolCall: (ev) => patchAsst((m) => ({ ...m, tools: [...(m.tools || []), ev] })),
         onToolUpdate: (ev) =>
           patchAsst((m) => ({ ...m, tools: (m.tools || []).map((t) => (t.id === ev.id ? ev : t)) })),
-        onDone: () => { patchAsst((m) => ({ ...m, running: false })); setBusy(false); loadMe(); },
+        onDone: () => { patchAsst((m) => ({ ...m, running: false })); setBusy(false); loadMe(); memoryCount().then(setMemCount); },
         onError: (msg) => { patchAsst((m) => ({ ...m, content: m.content || `⚠️ ${msg}`, running: false })); setBusy(false); },
         requireApproval: async (ev) => {
           const argStr = JSON.stringify(ev.args, null, 2);
@@ -104,7 +118,7 @@ export function AgentView({ model }: { model: string | null }) {
         },
       },
       ac.signal,
-      { temperature: settings.temperature, system_prompt: [settings.system_prompt, buildSkillsPrompt()].filter(Boolean).join("\n\n") },
+      { temperature: settings.temperature, system_prompt: [settings.system_prompt, buildSkillsPrompt(), memRecall].filter(Boolean).join("\n\n") },
     );
   }, [input, busy, model, msgs, enableLocal, settings, loadMe, dialog]);
 
@@ -131,6 +145,7 @@ export function AgentView({ model }: { model: string | null }) {
                 {isTauri() && "　📄 文件　🔎 搜索　✏️ 编辑　⌨️ 命令"}
                 {isTauri() && plugins > 0 && `　🧩 ${plugins} 个插件`}
                 {isTauri() && skills > 0 && `　📘 ${skills} 个技能`}
+                {isTauri() && memCount > 0 && `　🧠 ${memCount} 条记忆`}
               </div>
               <div className="agent-eg" onClick={() => setInput("搜索一下今天有什么科技新闻，总结3条")}>
                 💡 搜索今天的科技新闻并总结

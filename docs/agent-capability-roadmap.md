@@ -52,13 +52,13 @@
 - ✅ **轮次软提示**：接近上限时提示模型收敛
 - 验证：登录→流式带 tools→calculate 多轮全链路通过（临时账号已清理）
 
-### 🔜 M10 — 本地记忆系统（前端+后端，免编译核心，可选 Rust 加速）
+### ✅ M10（已完成，待实机验证）— 本地记忆系统
 对标 OpenClaw memory：
-- **记忆文件**：`~/.yt/memory/MEMORY.md` + `~/.yt/memory/YYYY-MM-DD.md`
-- **写入工具**：`memory_write`（Agent 可主动记事）
-- **检索工具**：`memory_search`（先做 FTS 关键词，够用；向量检索后置）
-- **自动召回**：每次对话前，把相关记忆片段注入上下文（system prompt addition）
-- 产出：YT「记得住」，跨对话连续。这是"越用越懂你"的关键。
+- ✅ **记忆文件**：`~/.yt/memory/MEMORY.md`
+- ✅ **写入工具** `memory_write`（Agent 主动记事，带日期）
+- ✅ **检索工具** `memory_search`（中文 2-gram + 英文分词，关键词打分，已单元验证）
+- ✅ **自动召回**：每次对话前基于用户输入检索相关记忆，注入 system prompt
+- 向量检索后置（需后端 embedding）。产出：YT"记得住"、跨对话连续。
 
 ### 🔜 M11 — 技能系统（对标 Skills，插件系统已铺好路）
 - `~/.yt/skills/<名>/SKILL.md`：声明式技能（描述 + 触发条件 + 步骤）
