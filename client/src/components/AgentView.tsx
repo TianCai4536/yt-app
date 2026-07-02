@@ -78,7 +78,8 @@ export function AgentView({ model }: { model: string | null }) {
       history as any,
       registry,
       {
-        onText: (full) => patchAsst((m) => ({ ...m, content: full })),
+        onText: (full) => patchAsst((m) => ({ ...m, content: m.content ? m.content : full })),
+        onTextDelta: (delta) => patchAsst((m) => ({ ...m, content: (m.content || "") + delta })),
         onToolCall: (ev) => patchAsst((m) => ({ ...m, tools: [...(m.tools || []), ev] })),
         onToolUpdate: (ev) =>
           patchAsst((m) => ({ ...m, tools: (m.tools || []).map((t) => (t.id === ev.id ? ev : t)) })),
