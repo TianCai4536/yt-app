@@ -1,6 +1,6 @@
 [package]
 name = "yixiang-tiankai"
-version = "0.4.0"
+version = "0.5.0"
 description = "异想天开 AI 客户端"
 authors = ["YiXiang TianKai"]
 edition = "2021"

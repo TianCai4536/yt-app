@@ -17,7 +17,7 @@ export function WorkbenchPage() {
   const { settings, load: loadSettings } = useSettings();
   const { reset } = useChat();
   const navigate = useNavigate();
-  const [view, setView] = useState<View>("chat");
+  const [view, setView] = useState<View>("agent");
   const [curModel, setCurModel] = useState<string | null>(null);
   const [sideOpen, setSideOpen] = useState(false); // 移动端侧栏
 
@@ -55,17 +55,13 @@ export function WorkbenchPage() {
           <span className="wb-title">异想天开</span>
         </div>
 
-        {/* 对话 + 历史记录 一组 */}
-        <div className="wb-section-label">对话</div>
-        <ConversationList model={curModel} onEnterChat={() => go("chat")} />
-
-        {/* 工具 */}
-        <div className="wb-section-label">工具</div>
+        {/* 主推:Agent 模式 */}
+        <div className="wb-section-label">智能助手</div>
         <div className="wb-tools">
-          <button className={`wb-tool${view === "agent" ? " active" : ""}`} onClick={() => go("agent")} title="Agent 自主调用工具完成任务">
+          <button className={`wb-tool wb-tool-primary${view === "agent" ? " active" : ""}`} onClick={() => go("agent")} title="Agent 自主调用工具完成任务">
             <span className="tool-icon">🤖</span>
             <span className="tool-label">Agent 模式</span>
-            <span className="tool-new">NEW</span>
+            <span className="tool-star">⭐</span>
           </button>
           <button className="wb-tool" disabled title="M8 浏览器 + OCR，开发中">
             <span className="tool-icon">🌐</span>
@@ -73,6 +69,10 @@ export function WorkbenchPage() {
             <span className="tool-soon">M8</span>
           </button>
         </div>
+
+        {/* 普通对话 + 历史 */}
+        <div className="wb-section-label">对话</div>
+        <ConversationList model={curModel} onEnterChat={() => go("chat")} />
 
         {/* 头像区 */}
         <div className="wb-side-foot">

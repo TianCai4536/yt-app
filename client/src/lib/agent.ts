@@ -11,7 +11,7 @@
 import { tokenStore, API_BASE } from "./api";
 import type { ChatMessage } from "./chat";
 import type { ToolDef } from "./tools";
-import { isDangerous } from "./tools";
+import { isDangerousDynamic } from "./tools";
 
 export interface ToolCallEvent {
   id: string;
@@ -183,8 +183,9 @@ export async function runAgent(
           continue;
         }
 
-        // 高危工具审批
-        if (isDangerous(name)) {
+        // 高危工具审批（动态：write_file 根据文件是否已存在判定）
+        const needsApproval = await isDangerousDynamic(name, args);
+        if (needsApproval) {
           const ok = await cb.requireApproval(ev);
           if (!ok) {
             ev.status = "rejected";

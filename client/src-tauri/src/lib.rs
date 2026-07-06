@@ -24,6 +24,13 @@ fn clip(s: String) -> String {
     }
 }
 
+// ---------------- 内置：探测路径是否存在（排除审批分级用）----------------
+#[tauri::command]
+fn tool_path_exists(path: String) -> Result<bool, String> {
+    if path.trim().is_empty() { return Ok(false); }
+    Ok(Path::new(&path).exists())
+}
+
 // ---------------- 内置：读文件 ----------------
 #[tauri::command]
 fn tool_read_file(path: String) -> Result<String, String> {
@@ -259,10 +266,98 @@ fn tool_plugin_dir() -> Result<String, String> {
     Ok(plugins_dir().to_string_lossy().to_string())
 }
 
+// ========================================================
+//                    数据目录（~/.yt/data/）
+// ========================================================
+
+// YT 根目录：~/.yt (保留以兼容已有 plugins/skills/memory)
+fn yt_root() -> PathBuf {
+    let base = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_else(|_| ".".into());
+    Path::new(&base).join(".yt")
+}
+
+// Agent 会话存储目录：~/.yt/sessions/agent/
+fn agent_sessions_dir() -> PathBuf {
+    let d = yt_root().join("sessions").join("agent");
+    let _ = fs::create_dir_all(&d);
+    d
+}
+
+// ---------------- Agent 会话：列表 ----------------
+// 返回按 updated_at 降序的 [{id,title,updated_at,message_count}]
+#[tauri::command]
+fn agent_session_list() -> Result<String, String> {
+    let dir = agent_sessions_dir();
+    let mut items: Vec<Value> = Vec::new();
+    if let Ok(entries) = fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.extension().and_then(|s| s.to_str()) != Some("json") { continue; }
+            let txt = match fs::read_to_string(&p) { Ok(t) => t, Err(_) => continue };
+            let v: Value = match serde_json::from_str(&txt) { Ok(v) => v, Err(_) => continue };
+            let id = p.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+            let title = v.get("title").and_then(|s| s.as_str()).unwrap_or("新会话").to_string();
+            let updated_at = v.get("updated_at").and_then(|s| s.as_str()).unwrap_or("").to_string();
+            let count = v.get("messages").and_then(|a| a.as_array()).map(|a| a.len()).unwrap_or(0);
+            items.push(serde_json::json!({
+                "id": id,
+                "title": title,
+                "updated_at": updated_at,
+                "message_count": count,
+            }));
+        }
+    }
+    // 按 updated_at 降序
+    items.sort_by(|a, b| {
+        let av = a.get("updated_at").and_then(|s| s.as_str()).unwrap_or("");
+        let bv = b.get("updated_at").and_then(|s| s.as_str()).unwrap_or("");
+        bv.cmp(av)
+    });
+    serde_json::to_string(&Value::Array(items)).map_err(|e| e.to_string())
+}
+
+// ---------------- Agent 会话：读 ----------------
+#[tauri::command]
+fn agent_session_load(id: String) -> Result<String, String> {
+    if id.trim().is_empty() { return Err("id 为空".into()); }
+    let path = agent_sessions_dir().join(format!("{}.json", sanitize_id(&id)));
+    fs::read_to_string(&path).map_err(|e| format!("会话不存在：{}", e))
+}
+
+// ---------------- Agent 会话：写（新建/更新）----------------
+#[tauri::command]
+fn agent_session_save(id: String, data: String) -> Result<String, String> {
+    if id.trim().is_empty() { return Err("id 为空".into()); }
+    // 验证 JSON 合法
+    let _: Value = serde_json::from_str(&data).map_err(|e| format!("JSON 格式错：{}", e))?;
+    let path = agent_sessions_dir().join(format!("{}.json", sanitize_id(&id)));
+    fs::write(&path, data).map_err(|e| format!("写入失败：{}", e))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+// ---------------- Agent 会话：删 ----------------
+#[tauri::command]
+fn agent_session_delete(id: String) -> Result<String, String> {
+    if id.trim().is_empty() { return Err("id 为空".into()); }
+    let path = agent_sessions_dir().join(format!("{}.json", sanitize_id(&id)));
+    if path.exists() {
+        fs::remove_file(&path).map_err(|e| format!("删除失败：{}", e))?;
+    }
+    Ok("ok".into())
+}
+
+// 处理 id，防止目录穿越
+fn sanitize_id(id: &str) -> String {
+    id.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            tool_path_exists,
             tool_read_file,
             tool_write_file,
             tool_edit_file,
@@ -272,7 +367,11 @@ pub fn run() {
             tool_run_shell,
             tool_plugin_list,
             tool_plugin_exec,
-            tool_plugin_dir
+            tool_plugin_dir,
+            agent_session_list,
+            agent_session_load,
+            agent_session_save,
+            agent_session_delete
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

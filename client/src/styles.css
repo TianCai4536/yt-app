@@ -603,6 +603,30 @@ input { font-family: inherit; }
 
 /* ===== Agent 模式 ===== */
 .wb-tool .tool-new { font-size: 10px; color: #fff; background: var(--c-grad); padding: 1px 7px; border-radius: 999px; flex-shrink: 0; }
+.wb-tool .tool-star { font-size: 12px; flex-shrink: 0; }
+.wb-tool-primary { background: linear-gradient(90deg, rgba(168,85,247,.15), rgba(236,72,153,.10)); border: 1px solid rgba(168,85,247,.4); }
+.wb-tool-primary:hover { border-color: var(--c-purple); }
+
+/* Agent 左侧会话列表 + 右侧对话区 */
+.agent-layout { display: flex; height: 100%; overflow: hidden; }
+.agent-sessions { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--c-border); background: var(--c-panel); }
+.agent-sessions-head { padding: 10px; border-bottom: 1px solid var(--c-border); }
+.agent-new-btn { width: 100%; padding: 8px 12px; border: 1px solid var(--c-border); border-radius: 8px; background: var(--c-panel2); color: var(--c-text); cursor: pointer; font-size: 13px; }
+.agent-new-btn:hover:not(:disabled) { border-color: var(--c-purple); background: rgba(168,85,247,.08); }
+.agent-new-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.agent-sessions-list { flex: 1; overflow-y: auto; padding: 6px; }
+.agent-sessions-empty { text-align: center; color: var(--c-text-dim); padding: 20px 0; font-size: 12px; }
+.agent-session-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; cursor: pointer; transition: .15s; margin-bottom: 2px; }
+.agent-session-item:hover { background: var(--c-panel2); }
+.agent-session-item.active { background: rgba(168,85,247,.12); border: 1px solid rgba(168,85,247,.3); }
+.agent-session-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.agent-session-del { flex-shrink: 0; width: 22px; height: 22px; border: none; border-radius: 4px; background: transparent; color: var(--c-text-dim); cursor: pointer; font-size: 16px; line-height: 1; }
+.agent-session-del:hover { background: rgba(239,68,68,.15); color: #fca5a5; }
+.agent-main { flex: 1; min-width: 0; }
+
+@media (max-width: 768px) {
+  .agent-sessions { width: 140px; }
+}
 .agent-empty .agent-examples { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .agent-tools-avail { font-size: 13px; color: var(--c-text-dim); margin-bottom: 6px; }
 .agent-eg { font-size: 13px; color: var(--c-text); background: var(--c-panel2); border: 1px solid var(--c-border); border-radius: 999px; padding: 7px 16px; cursor: pointer; transition: .15s; }

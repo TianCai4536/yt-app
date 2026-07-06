@@ -231,13 +231,30 @@ export function buildToolRegistry(enableLocal: boolean): Map<string, ToolDef> {
   return reg;
 }
 
-// 高危工具（需审批）：内置高危 + 插件声明的高危
-const BUILTIN_DANGEROUS = new Set(["write_file", "run_shell", "edit_file"]);
+// 审批分级（v0.5.0）：
+//   - 只读/查询：不审批（read_file/list_dir/glob/grep/web_search/web_fetch/calculate/read_skill/memory_search）
+//   - 新增（不覆盖）：不审批 —— write_file 会在 Rust 端检测目标不存在时直接放行
+//   - 修改/删除/执行：需审批（run_shell/edit_file、write_file 覆盖已有、插件声明的 dangerous）
+// write_file 特殊：先探测目标是否存在，存在则审批，不存在放行（在 agent.ts 里处理，见 isDangerousDynamic）
+const ALWAYS_DANGEROUS = new Set(["run_shell", "edit_file"]);
 export function isDangerous(name: string): boolean {
-  return BUILTIN_DANGEROUS.has(name) || dangerousPlugins.has(name);
+  return ALWAYS_DANGEROUS.has(name) || dangerousPlugins.has(name);
 }
+
+// write_file 动态判定：目标已存在 → 覆盖 → 审批；不存在 → 新增 → 直接放行
+export async function isDangerousDynamic(name: string, args: any): Promise<boolean> {
+  if (isDangerous(name)) return true;
+  if (name === "write_file" && isTauri()) {
+    try {
+      const exists = await invokeTauri("tool_path_exists", { path: args?.path || "" });
+      return Boolean(exists);
+    } catch { return true; /* 探测失败保守审批 */ }
+  }
+  return false;
+}
+
 // 兼容旧引用
-export const DANGEROUS_TOOLS = BUILTIN_DANGEROUS;
+export const DANGEROUS_TOOLS = ALWAYS_DANGEROUS;
 
 export function toolSchemas(reg: Map<string, ToolDef>): any[] {
   return Array.from(reg.values()).map((t) => t.schema);
